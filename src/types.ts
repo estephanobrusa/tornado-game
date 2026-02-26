@@ -1,21 +1,16 @@
-// Types for trail points
+
+
+// Types for room joining
+
+import { WinnerResult, JoinRoomPayload, UpdatePositionPayload } from "./typesBackend";
+
+// TrailPoint type for mouse trail
 export interface TrailPoint {
   x: number;
   y: number;
   timestamp: number;
-  alpha: number;
+  alpha?: number;
 }
-
-// Types for players
-export interface Player {
-  x: number;
-  y: number;
-  trail: TrailPoint[];
-  color: string;
-  lastUpdate: number;
-}
-
-// Types for room joining
 export interface JoinRoomMessage {
   username: string;
   roomId: string;
@@ -90,4 +85,24 @@ export interface UseMouseTrailReturn {
   playerCount: number;
   playerId: string | null;
   score: number;
+  winnerResult: WinnerResult | null;
 }
+
+
+
+export interface TrailCompleteEvent {
+  playerId: string;
+  trail: TrailPoint[];
+  timestamp: number;
+}
+
+
+
+export interface ClientToServerEvents {
+  joinRoom: (data: JoinRoomPayload) => void;
+  updatePosition: (data: UpdatePositionPayload) => void;
+  trailComplete: (data: TrailCompleteEvent) => void;
+}
+
+
+

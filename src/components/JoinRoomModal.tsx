@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import '../styles.css';
 
 interface JoinRoomModalProps {
   onJoinRoom: (username: string, roomId: string) => void;
@@ -26,41 +27,13 @@ const JoinRoomModal: React.FC<JoinRoomModalProps> = ({ onJoinRoom }) => {
   };
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      width: '100%',
-      height: '100%',
-      backgroundColor: 'rgba(0, 0, 0, 0.8)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 1000
-    }}>
-      <div style={{
-        backgroundColor: 'white',
-        padding: '30px',
-        borderRadius: '12px',
-        boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3)',
-        width: '400px',
-        maxWidth: '90vw'
-      }}>
-        <h2 style={{
-          margin: '0 0 20px 0',
-          color: '#333',
-          textAlign: 'center',
-          fontSize: '24px'
-        }}>Join a Room</h2>
+    <div className="join-room-modal-overlay">
+      <div className="join-room-modal-box">
+        <h2 className="join-room-title">Join a Room</h2>
         
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: '20px' }}>
-            <label style={{
-              display: 'block',
-              marginBottom: '8px',
-              color: '#555',
-              fontWeight: 'bold'
-            }}>Username:</label>
+            <label className="join-room-label">Username:</label>
             <input
               type="text"
               value={username}
@@ -69,24 +42,12 @@ const JoinRoomModal: React.FC<JoinRoomModalProps> = ({ onJoinRoom }) => {
                 setError('');
               }}
               placeholder="Enter your name"
-              style={{
-                width: '100%',
-                padding: '12px',
-                border: '2px solid #ddd',
-                borderRadius: '6px',
-                fontSize: '16px',
-                boxSizing: 'border-box'
-              }}
+              className="join-room-input"
             />
           </div>
           
           <div style={{ marginBottom: '20px' }}>
-            <label style={{
-              display: 'block',
-              marginBottom: '8px',
-              color: '#555',
-              fontWeight: 'bold'
-            }}>Room ID:</label>
+            <label className="join-room-label">Room ID:</label>
             <input
               type="text"
               value={roomId}
@@ -95,43 +56,19 @@ const JoinRoomModal: React.FC<JoinRoomModalProps> = ({ onJoinRoom }) => {
                 setError('');
               }}
               placeholder="Enter room ID"
-              style={{
-                width: '100%',
-                padding: '12px',
-                border: '2px solid #ddd',
-                borderRadius: '6px',
-                fontSize: '16px',
-                boxSizing: 'border-box'
-              }}
+              className="join-room-input"
             />
           </div>
           
           {error && (
-            <div style={{
-              color: '#f44336',
-              marginBottom: '15px',
-              textAlign: 'center',
-              fontSize: '14px'
-            }}>
+            <div className="join-room-error">
               {error}
             </div>
           )}
           
           <button
             type="submit"
-            style={{
-              width: '100%',
-              padding: '12px',
-              backgroundColor: '#4CAF50',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              fontSize: '16px',
-              cursor: 'pointer',
-              fontWeight: 'bold'
-            }}
-            onMouseOver={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#45a049'}
-            onMouseOut={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#4CAF50'}
+            className="join-room-btn"
           >
             Join Room
           </button>

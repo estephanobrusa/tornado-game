@@ -1,12 +1,12 @@
 import { TrailPoint } from './types';
 
 // Constants
-export const TRAIL_FADE_TIME = 3000; // 3 seconds
+export const TRAIL_FADE_TIME = 10500; // 3 seconds
 export const TRAIL_MAX_POINTS = 300;
 export const INTERPOLATION_DISTANCE = 10;
 export const INTERPOLATION_STEP = 5;
 export const THROTTLE_MS = 50;
-export const PLAYER_TIMEOUT = 5000; // 5 seconds
+export const PLAYER_TIMEOUT = 10500; // 1 second
 export const CURSOR_TIMEOUT = 100; // 100ms
 export const CANVAS_WIDTH = 1040;
 export const CANVAS_ASPECT_RATIO = 9 / 16;

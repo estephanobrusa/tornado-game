@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { io, Socket } from "socket.io-client";
-import { TrailPoint, Player, UseMouseTrailReturn } from "./types";
+import { UseMouseTrailReturn } from "./types";
 import {
   TRAIL_MAX_POINTS,
   THROTTLE_MS,
@@ -12,6 +12,9 @@ import {
   interpolatePoints,
   drawCursor,
 } from "./utils";
+import { Player, ServerToClientEvents, ClientToServerEvents, Trail, PlayerLeftEvent, PlayerPositionUpdateEvent, JoinedRoomEvent, ScoreUpdateEvent, PlayerCountEvent, WinnerResult } from "./typesBackend";
+  
+import { TrailPoint } from "./types";
 
 const useMouseTrail = (
   wsUrl: string | null = "http://localhost:3001",
@@ -20,27 +23,21 @@ const useMouseTrail = (
 ): UseMouseTrailReturn => {
   // Refs for canvas and data
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const trailRef = useRef<TrailPoint[]>([]);
-  const graficheTrailRef = useRef<TrailPoint[]>([]);
+  const trailRef = useRef<Trail>([]);
+  const graficheTrailRef = useRef<Trail>([]);
   const animationRef = useRef<number | null>(null);
-  const socketRef = useRef<Socket | null>(null);
-  const playerRef = useRef<>(null);
+  const socketRef = useRef<Socket<
+    ServerToClientEvents,
+    ClientToServerEvents
+  > | null>(null);
+  const playerRef = useRef<Player>(null);
   const otherPlayersRef = useRef<Map<string, Player>>(new Map());
-  console.log("🚀 ~ useMouseTrail ~ otherPlayersRef:", otherPlayersRef)
   const lastSentRef = useRef<number>(0);
 
-  // States
-  const [otherPlayers, setOtherPlayers] = useState<Map<string, Player>>(
-    new Map()
-  );
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [playerCount, setPlayerCount] = useState<number>(1);
+  const [winnerResult, setWinnerResult] = useState<WinnerResult | null>(null);
   const [score, setScore] = useState<number>(0);
-
-  // Synchronize ref with state
-  useEffect(() => {
-    otherPlayersRef.current = otherPlayers;
-  }, [otherPlayers]);
 
   // Function to connect Socket.IO
   const connectSocket = useCallback(() => {
@@ -49,92 +46,74 @@ const useMouseTrail = (
       return;
     }
     try {
-      const socket = io(wsUrl, {
-        transports: ["websocket"],
-        timeout: 10000,
-      });
+      const socket: Socket<ServerToClientEvents, ClientToServerEvents> = io(
+        wsUrl,
+        {
+          transports: ["websocket"],
+          timeout: 10000,
+        }
+      );
 
       socketRef.current = socket;
 
       socket.on("connect", () => {
-        console.log("Conectado al servidor Socket.IO");
+        console.log("Connected to Socket.IO server");
         setIsConnected(true);
 
-        // Unirse a la sala inmediatamente después de conectar
         socket.emit("joinRoom", {
           playerName: username,
           roomId,
         });
       });
 
-      socket.on("joinedRoom", (data) => {
-        console.log("Se unió a la sala:", data);
-        setPlayerCount(data.playerNumber);
+
+      socket.on("joinedRoom", (data: JoinedRoomEvent) => {
+        console.log("Joined the room:", data.player.id);
+        setPlayerCount(data.numberPlayers);
         playerRef.current = data.player;
       });
 
-      socket.on("playerJoined", (data) => {
-        console.log("Jugador se unió:", data.color);
-        setPlayerCount(data.playerNumber);
-        if (data.playerId && !playerRef.current) {
-          playerRef.current = data.playerId;
+    
+
+      socket.on("playerLeft", (data: PlayerLeftEvent) => {
+        console.log("Player left:", data);
+        if (data.room && data.room.players) {
+          setPlayerCount(data.room.players.length);
         }
-        // Add new player to otherPlayers if it's not the current player
-        if (data.id && data.id !== playerRef.current) {
-          setOtherPlayers((prev) => {
-            const newMap = new Map(prev);
-            // Initialize with default values until we get position updates
-            newMap.set(data.playerId, {
-              x: 0,
-              y: 0,
-              trail: [],
-              color: data.color ,
-              lastUpdate: Date.now(),
-            });
-            return newMap;
+        otherPlayersRef.current.delete(data.playerId);
+      });
+
+      socket.on("playerPositionUpdate", (data: PlayerPositionUpdateEvent) => {
+        if (data.playerId !== playerRef.current?.id) {
+          console.log('[playerPositionUpdate] received:', data);
+          const prev = otherPlayersRef.current.get(data.playerId);
+          otherPlayersRef.current.set(data.playerId, {
+            ...prev,
+            id: data.playerId,
+            name: prev?.name || "",
+            number: prev?.number || 0,
+            position: { x: data.x, y: data.y, timestamp: Date.now() },
+            trail: (data.trail as TrailPoint[]) || [],
+            lastUpdate: Date.now(),
+            score: prev?.score || 0,
+            color: data?.color || "#ccc",
           });
         }
       });
 
-      socket.on("playerLeft", (data) => {
-        console.log("Jugador se fue:", data);
-        setPlayerCount(data.playerNumber);
-        setOtherPlayers((prev) => {
-          const newMap = new Map(prev);
-          newMap.delete(data.playerId);
-          return newMap;
-        });
-      });
-
-      socket.on("playerPositionUpdate", (data) => {
-        if (data.playerId !== playerRef.current) {
-          setOtherPlayers((prev) => {
-            const newMap = new Map(prev);
-            newMap.set(data.playerId, {
-              x: data.x,
-              y: data.y,
-              trail: data.trail || [],
-              color: data.color,
-              lastUpdate: Date.now(),
-            });
-            return newMap;
-          });
+      socket.on("scoreUpdate", (data: ScoreUpdateEvent) => {
+        const playerId = playerRef.current?.id;
+        const scoreUser = playerId && data.scores?.[playerId];
+        if (typeof scoreUser === "number") {
+          setScore(scoreUser);
         }
       });
 
-      socket.on("scoreUpdate", (data) => {
-        const scoreUser = playerRef.current &&  data.score?.[playerRef?.current];
-       if(scoreUser) {
-         setScore(scoreUser);
-       }
-      });
-
-      socket.on("playerCount", (data) => {
+      socket.on("playerCount", (data: PlayerCountEvent) => {
         setPlayerCount(data.count);
       });
 
-      socket.on("disconnect", (reason) => {
-        console.log("Disconnected from Socket.IO server:", reason);
+      socket.on("disconnect", () => {
         setIsConnected(false);
       });
 
@@ -142,13 +121,17 @@ const useMouseTrail = (
         console.error("Socket.IO connection error:", error);
         setIsConnected(false);
       });
+
+        socket.on("gameOver", (data: WinnerResult) => {
+        console.log("[gameOver]", data);
+        setWinnerResult(data);
+      });
     } catch (error) {
       console.error("Error creating Socket.IO connection:", error);
       setIsConnected(false);
     }
   }, [wsUrl, username, roomId]);
 
-  // Throttling ref for mouse position updates
 
   // Function to check if trail forms a closed path
   const checkTrailClosure = useCallback((trail: TrailPoint[]) => {
@@ -174,14 +157,10 @@ const useMouseTrail = (
 
   // Function to send trail complete event
   const sendTrailComplete = useCallback((trail?: TrailPoint[]) => {
-    if (
-      socketRef.current &&
-      socketRef.current.connected &&
-      playerRef.current
-    ) {
+    if (socketRef.current && socketRef.current.connected && playerRef.current) {
       try {
         const message = {
-          playerId: playerRef.current,
+          playerId: playerRef.current.id,
           trail: trail || [],
           timestamp: Date.now(),
         };
@@ -208,10 +187,10 @@ const useMouseTrail = (
 
         try {
           const message = {
-            playerId: playerRef.current,
+            id: playerRef.current.id,
             x: x,
             y: y,
-            trail: trail.slice(-TRAIL_MAX_POINTS), // Send only the last 300 points to reduce bandwidth
+            trail: trail.slice(-TRAIL_MAX_POINTS),
           };
           socketRef.current.emit("updatePosition", message);
           lastSentRef.current = now;
@@ -222,30 +201,32 @@ const useMouseTrail = (
     },
     []
   );
+
   function findClosedPart(points: TrailPoint[], epsilon = 5, minGap = 10) {
-  for (let i = minGap; i < points.length; i++) {
-    const {x: x1, y: y1} = points[i];
+    for (let i = minGap; i < points.length; i++) {
+      const { x: x1, y: y1 } = points[i];
 
-    // Comparamos con puntos anteriores
-    for (let j = 0; j < i - minGap; j++) {
-      const {x: x2, y: y2} = points[j];
-      const distance = Math.hypot(x1 - x2, y1 - y2);
+      // Compare with previous points
+      for (let j = 0; j < i - minGap; j++) {
+        const { x: x2, y: y2 } = points[j];
+        const distance = Math.hypot(x1 - x2, y1 - y2);
 
-      if (distance < epsilon) {
-        // Encontramos un cierre
-        return {
-          isClosed: true,
-          startIndex: j,
-          endIndex: i,
-          closedPoints: points.slice(j, i + 1),
-        };
+        if (distance < epsilon) {
+          // Found a closure
+          return {
+            isClosed: true,
+            startIndex: j,
+            endIndex: i,
+            closedPoints: points.slice(j, i + 1),
+          };
+        }
       }
     }
+
+    return { isClosed: false };
   }
 
-  return { isClosed: false };
-}
-
+    
 
   // Main canvas configuration function
   useEffect(() => {
@@ -297,26 +278,37 @@ const useMouseTrail = (
         };
 
         // If there's a previous point and distance is large, interpolate points
-        const lastPoint = graficheTrailRef.current[graficheTrailRef.current.length - 1];
+        const lastPoint =
+          graficheTrailRef.current[graficheTrailRef.current.length - 1];
         if (lastPoint) {
-          const interpolatedPoints = interpolatePoints(lastPoint, newPoint);
+          // Ensure lastPoint has timestamp
+          const safeLastPoint: TrailPoint = {
+            ...lastPoint,
+            timestamp: lastPoint.timestamp ?? Date.now(),
+          };
+          const interpolatedPoints = interpolatePoints(safeLastPoint, newPoint);
           graficheTrailRef.current.push(...interpolatedPoints);
         }
 
-        graficheTrailRef.current = [...graficheTrailRef.current, newPoint].slice(
-          -TRAIL_MAX_POINTS
-        );
+        graficheTrailRef.current = [
+          ...graficheTrailRef.current,
+          newPoint,
+        ].slice(-TRAIL_MAX_POINTS);
 
         trailRef.current = graficheTrailRef.current;
-        
-        const closeFigure = findClosedPart(trailRef.current);
-        // Check if trail is now closed (forms a complete path)
-        if (closeFigure.isClosed) {
-            sendTrailComplete(closeFigure.closedPoints);
+
+       
+        const safeTrail = trailRef.current.map((p) => ({
+          ...p,
+          timestamp: p.timestamp ?? Date.now(),
+        })) as TrailPoint[];
+        const closeFigureSafe = findClosedPart(safeTrail);
+        if (closeFigureSafe.isClosed) {
+          sendTrailComplete(closeFigureSafe.closedPoints as TrailPoint[]);
         }
 
         // Send position via WebSocket (throttled) - only send trailRef
-        sendMousePosition(newPoint.x, newPoint.y, graficheTrailRef.current);
+        sendMousePosition(newPoint.x, newPoint.y, graficheTrailRef.current as TrailPoint[]);
       } else {
         // If mouse leaves canvas, clear trail gradually
         if (graficheTrailRef.current.length > 0) {
@@ -336,31 +328,38 @@ const useMouseTrail = (
       graficheTrailRef.current = graficheTrailRef.current
         .map((point) => ({
           ...point,
-          alpha: Math.max(0, 1 - (currentTime - point.timestamp) / 10000), // Fades in 3 seconds
+          timestamp: point.timestamp ?? Date.now(),
+          alpha: Math.max(0, 1 - (currentTime - (point.timestamp ?? Date.now())) / 10000), // Fades in 3 seconds
         }))
         .filter((point) => point.alpha > 0.01); // Remove nearly invisible points
 
       // Draw the trail
-      renderTrail(ctx, graficheTrailRef.current, "rgba(200, 200, 255, 1)", currentTime);
+      renderTrail(
+        ctx,
+        graficheTrailRef.current as TrailPoint[],
+        playerRef.current?.color || "rgba(200, 200, 255, 1)",
+        currentTime
+      );
 
       // Draw trails and cursors of other players
       otherPlayersRef.current.forEach((player: Player, playerId: string) => {
         // Only draw if player has been updated recently (less than 5 seconds)
         if (currentTime - player.lastUpdate < PLAYER_TIMEOUT) {
           // Draw other player's trail
-          renderTrail(ctx, player.trail, player.color, currentTime);
+          renderTrail(ctx, player.trail as TrailPoint[], player.color, currentTime);
 
           // Draw other player's cursor
-          drawCursor(ctx, player.x, player.y, player.color);
+          drawCursor(ctx, player.position.x, player.position.y, player.color);
         }
       });
 
       // Draw custom cursor at current mouse position (local player)
       if (graficheTrailRef.current.length > 0) {
-        const lastPoint = graficheTrailRef.current[graficheTrailRef.current.length - 1];
+        const lastPoint =
+          graficheTrailRef.current[graficheTrailRef.current.length - 1];
 
         // Only draw if last point is recent
-        if (currentTime - lastPoint.timestamp < CURSOR_TIMEOUT) {
+        if (currentTime - (lastPoint.timestamp ?? Date.now()) < CURSOR_TIMEOUT) {
           drawCursor(ctx, lastPoint.x, lastPoint.y, "rgba(100, 200, 255, 0.8)");
         }
       }
@@ -394,8 +393,9 @@ const useMouseTrail = (
     canvasRef,
     isConnected,
     playerCount,
-    playerId: playerRef.current,
-    score
+    playerId: playerRef.current?.id ?? null,
+    score,
+    winnerResult,
   };
 };
 

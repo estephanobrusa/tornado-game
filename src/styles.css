@@ -1,0 +1,125 @@
+/* WinnerModal styles */
+.winner-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0,0,0,0.7);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.winner-modal-box {
+  background: white;
+  border-radius: 12px;
+  padding: 32px;
+  min-width: 320px;
+  text-align: center;
+  box-shadow: 0 4px 32px rgba(0,0,0,0.2);
+}
+.winner-modal-ranking {
+  text-align: left;
+}
+.winner-modal-restart-btn {
+  margin-top: 24px;
+  padding: 10px 24px;
+  border-radius: 8px;
+  border: none;
+  background: #2196f3;
+  color: white;
+  font-weight: bold;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+/* App styles for inline migrated */
+.canvas-main {
+  position: absolute;
+  border: 2px solid rgba(100, 200, 255, 0.3);
+  border-radius: 8px;
+  box-shadow: 0 0 20px rgba(100, 200, 255, 0.2);
+  background-color: rgba(0, 0, 0, 0.1);
+  z-index: 10;
+}
+.connection-info {
+  position: fixed;
+  top: 0px;
+  right: 20px;
+  padding: 10px;
+  background-color: rgba(0, 0, 0, 0.8);
+  border-radius: 8px;
+  color: white;
+  font-size: 14px;
+  z-index: 20;
+}
+.connection-status {
+  color: #4CAF50;
+}
+.connection-status.disconnected {
+  color: #f44336;
+}
+
+/* JoinRoomModal styles */
+.join-room-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.join-room-modal-box {
+  background-color: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  width: 400px;
+  max-width: 90vw;
+}
+.join-room-title {
+  margin: 0 0 20px 0;
+  color: #333;
+  text-align: center;
+  font-size: 24px;
+}
+.join-room-label {
+  display: block;
+  margin-bottom: 8px;
+  color: #555;
+  font-weight: bold;
+}
+.join-room-input {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #ddd;
+  border-radius: 6px;
+  font-size: 16px;
+  box-sizing: border-box;
+}
+.join-room-error {
+  color: #f44336;
+  margin-bottom: 15px;
+  text-align: center;
+  font-size: 14px;
+}
+.join-room-btn {
+  width: 100%;
+  padding: 12px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background 0.2s;
+}
+.join-room-btn:hover {
+  background-color: #45a049;
+}
